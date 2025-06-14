@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
+from datetime import datetime
 
 st.set_page_config(page_title="Ordenes Producibles", layout="wide")
 st.title("📄 Análisis de Producción: COOIS, ZCO41 vs MB52")
@@ -14,6 +15,8 @@ zco41_file = st.sidebar.file_uploader("ZCO41 - Nueva demanda", type="xlsx")
 
 if crossref_file and mb52_file and coois_file and zco41_file:
     st.success("Archivos cargados correctamente")
+
+    today = pd.to_datetime(datetime.today().date())
 
     # Leer archivos
     crossref = pd.read_excel(crossref_file, sheet_name=0)
@@ -86,5 +89,13 @@ if crossref_file and mb52_file and coois_file and zco41_file:
             "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
         ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
+
+    with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
+        zco41_past_due = zco41_eval[(~zco41_eval['Can Produce_order']) & (pd.to_datetime(zco41_eval['Estimated Ship Date']) < today)]
+        coois_past_due = coois_eval[(~coois_eval['Can Produce_order']) & (pd.to_datetime(coois_eval['Est. Ship Date']) < today)]
+        st.subheader("ZCO41 - Past Due")
+        st.dataframe(zco41_past_due)
+        st.subheader("COOIS - Past Due")
+        st.dataframe(coois_past_due)
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
