@@ -66,17 +66,25 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Shortage Qty'] = df['Pln.Or Qty'] - df['Available after COOIS']
-        df['Reason'] = "Sales Order " + df['Sales Order'].astype(str) + " needs " + df['Pln.Or Qty'].astype(str) + \
-                      " units of '" + df['Custom Description'] + "', but only " + df['Available after COOIS'].astype(str) + \
-                      " are available. Shortage: " + df['Shortage Qty'].astype(str)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+        ) if row['Pln.Or Qty'] > row['Available after COOIS'] else (
+            "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Shortage Qty', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
         df['Shortage Qty'] = df['Order quantity (GMEIN)'] - df['Open Quantity']
-        df['Reason'] = "Sales Order " + df['Sales Order'].astype(str) + " needs " + df['Order quantity (GMEIN)'].astype(str) + \
-                      " units of '" + df['Custom Description'] + "', but only " + df['Open Quantity'].astype(str) + \
-                      " are available. Shortage: " + df['Shortage Qty'].astype(str)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+            " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+        ) if row['Order quantity (GMEIN)'] > row['Open Quantity'] else (
+            "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Shortage Qty', 'Reason']])
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
