@@ -65,7 +65,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
-        df['Shortage Qty'] = df['Pln.Or Qty'] - df['Available after COOIS']
+        df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
         df['Reason'] = df.apply(lambda row: (
             "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
             " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
@@ -73,11 +73,11 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         ) if row['Pln.Or Qty'] > row['Available after COOIS'] else (
             "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
         ), axis=1)
-        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Shortage Qty', 'Reason']])
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
-        df['Shortage Qty'] = df['Order quantity (GMEIN)'] - df['Open Quantity']
+        df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
         df['Reason'] = df.apply(lambda row: (
             "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
             " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
@@ -85,6 +85,6 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         ) if row['Order quantity (GMEIN)'] > row['Open Quantity'] else (
             "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
         ), axis=1)
-        st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Shortage Qty', 'Reason']])
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
