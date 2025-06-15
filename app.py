@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
-import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-from matplotlib.backends.backend_pdf import PdfPages
 
 st.set_page_config(page_title="Ordenes Producibles", layout="wide")
 st.title("📄 Análisis de Producción: COOIS, ZCO41 vs MB52")
@@ -38,81 +35,46 @@ with st.expander("📊 Resumen Diario Manual"):
     })
     st.dataframe(resumen_diario, use_container_width=True)
 
-    # Gráfico de barras
-    fig, ax = plt.subplots(figsize=(6, 1.5))
-    ax.barh(["Units shipped"], [units_shipped], color="green")
-    ax.barh(["Units shipped"], [balance], left=[units_shipped], color="lightgray")
-    ax.set_xlim(0, max(forecast, units_shipped + balance))
-    ax.xaxis.set_major_formatter(ticker.FuncFormatter(lambda x, _: f'{int(x):,}'))
-    ax.set_title("Progress vs Forecast", fontsize=10)
-    st.pyplot(fig)
+    # Si los archivos están cargados, hacer el análisis básico y agregarlo al Excel
+    if crossref_file and mb52_file and coois_file and zco41_file:
+        crossref = pd.read_excel(crossref_file)
+        mb52 = pd.read_excel(mb52_file)
+        coois = pd.read_excel(coois_file)
+        zco41 = pd.read_excel(zco41_file)
 
-    # Botón para exportar a PDF
-    if st.button("📤 Descargar resumen diario en PDF"):
-        buffer = BytesIO()
-        with PdfPages(buffer) as pdf:
-            # Agregar gráfico
-            pdf.savefig(fig, bbox_inches='tight')
-            plt.close(fig)
+        crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
+        mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
+        mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
-            # Agregar tabla como texto
-            fig_table, ax_table = plt.subplots(figsize=(6, 2))
-            ax_table.axis('off')
-            table_data = resumen_diario.values.tolist()
-            col_labels = resumen_diario.columns.tolist()
-            table = ax_table.table(cellText=table_data, colLabels=col_labels, loc='center')
-            table.auto_set_font_size(False)
-            table.set_fontsize(8)
-            table.scale(1.2, 1.2)
-            pdf.savefig(fig_table, bbox_inches='tight')
-            plt.close(fig_table)
+        coois = coois.rename(columns={'Material description': 'Custom Description'})
+        zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
 
-            # Si los archivos están cargados, hacer el análisis básico y agregarlo al PDF
-            if crossref_file and mb52_file and coois_file and zco41_file:
-                crossref = pd.read_excel(crossref_file)
-                mb52 = pd.read_excel(mb52_file)
-                coois = pd.read_excel(coois_file)
-                zco41 = pd.read_excel(zco41_file)
+        coois_sum = coois.groupby('Custom Description', as_index=False)['Order quantity (GMEIN)'].sum()
+        zco41_sum = zco41.groupby('Custom Description', as_index=False)['Pln.Or Qty'].sum()
 
-                crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
-                mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
-                mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
+        full = mb52_custom[['Custom Description', 'Open Quantity']].merge(coois_sum, on='Custom Description', how='left')\
+            .merge(zco41_sum, on='Custom Description', how='left').fillna(0)
 
-                coois = coois.rename(columns={'Material description': 'Custom Description'})
-                zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
+        full['Available after COOIS'] = full['Open Quantity'] - full['Order quantity (GMEIN)']
+        full['Available after ALL'] = full['Available after COOIS'] - full['Pln.Or Qty']
 
-                coois_sum = coois.groupby('Custom Description', as_index=False)['Order quantity (GMEIN)'].sum()
-                zco41_sum = zco41.groupby('Custom Description', as_index=False)['Pln.Or Qty'].sum()
+        faltantes = full[full['Available after ALL'] < 0].copy()
+        faltantes['Cantidad Faltante'] = -faltantes['Available after ALL']
+        faltantes = faltantes[['Custom Description', 'Cantidad Faltante']]
+        faltantes = faltantes.sort_values(by='Cantidad Faltante', ascending=False)
 
-                full = mb52_custom[['Custom Description', 'Open Quantity']].merge(coois_sum, on='Custom Description', how='left')\
-                    .merge(zco41_sum, on='Custom Description', how='left').fillna(0)
+        # Combinar resumen diario y faltantes en un solo Excel
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            resumen_diario.to_excel(writer, sheet_name='Resumen Diario', index=False)
+            faltantes.to_excel(writer, sheet_name='Materiales Faltantes', index=False)
+        output.seek(0)
 
-                full['Available after COOIS'] = full['Open Quantity'] - full['Order quantity (GMEIN)']
-                full['Available after ALL'] = full['Available after COOIS'] - full['Pln.Or Qty']
-
-                faltantes = full[full['Available after ALL'] < 0].copy()
-                faltantes['Cantidad Faltante'] = -faltantes['Available after ALL']
-                faltantes = faltantes[['Custom Description', 'Cantidad Faltante']]
-                faltantes = faltantes.sort_values(by='Cantidad Faltante', ascending=False)
-
-                # Agregar faltantes como tabla
-                fig_falt, ax_falt = plt.subplots(figsize=(6, min(10, 0.25*len(faltantes))))
-                ax_falt.axis('off')
-                table_data = faltantes.values.tolist()
-                col_labels = faltantes.columns.tolist()
-                table = ax_falt.table(cellText=table_data, colLabels=col_labels, loc='center')
-                table.auto_set_font_size(False)
-                table.set_fontsize(8)
-                table.scale(1.2, 1.2)
-                pdf.savefig(fig_falt, bbox_inches='tight')
-                plt.close(fig_falt)
-
-        buffer.seek(0)
         st.download_button(
-            label="📥 Descargar PDF",
-            data=buffer,
-            file_name=f"resumen_diario_{datetime.today().date()}.pdf",
-            mime="application/pdf"
+            label="📥 Descargar resumen en Excel",
+            data=output,
+            file_name=f"resumen_diario_{datetime.today().date()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
 # Continuación lógica solo si hay archivos cargados
