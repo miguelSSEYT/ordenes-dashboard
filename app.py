@@ -65,7 +65,7 @@ with st.expander("📊 Resumen Diario Manual"):
 
         # Combinar resumen diario y faltantes en un solo Excel
         output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
             resumen_diario.to_excel(writer, sheet_name='Resumen Diario', index=False)
             faltantes.to_excel(writer, sheet_name='Materiales Faltantes', index=False)
         output.seek(0)
