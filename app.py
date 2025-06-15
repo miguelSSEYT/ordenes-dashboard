@@ -79,7 +79,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     zco41_sum = zco41.groupby('Custom Description', as_index=False)['Pln.Or Qty'].sum()
 
     # Combinar todo
-    full = mb52_custom[['Custom Description', 'Open Quantity']].merge(coois_sum, on='Custom Description', how='left')\
+    full = mb52_custom[['Custom Description', 'Material description', 'Open Quantity']].merge(coois_sum, on='Custom Description', how='left')\
         .merge(zco41_sum, on='Custom Description', how='left').fillna(0)
 
     full['Available after COOIS'] = full['Open Quantity'] - full['Order quantity (GMEIN)']
@@ -139,5 +139,22 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         st.dataframe(zco41_past_due)
         st.subheader("COOIS - Past Due")
         st.dataframe(coois_past_due)
+
+    with st.expander("📦 Material Requerido para Cumplir Producción"):
+        coois_eval['Cantidad Faltante'] = coois_eval['Order quantity (GMEIN)'] - coois_eval['Open Quantity']
+        zco41_eval['Cantidad Faltante'] = zco41_eval['Pln.Or Qty'] - zco41_eval['Available after COOIS']
+
+        faltantes_total = pd.concat([
+            coois_eval[~coois_eval['Can Produce']][['Custom Description', 'Cantidad Faltante']],
+            zco41_eval[~zco41_eval['Can Produce']][['Custom Description', 'Cantidad Faltante']]
+        ])
+
+        faltantes_grouped = faltantes_total.groupby('Custom Description', as_index=False).sum()
+        faltantes_grouped = faltantes_grouped[faltantes_grouped['Cantidad Faltante'] > 0]
+
+        faltantes_con_non_custom = faltantes_grouped.merge(crossref, left_on='Custom Description', right_on='Custom Description', how='left')
+        faltantes_con_non_custom = faltantes_con_non_custom[['Custom Description', 'Material description', 'Cantidad Faltante']]
+        st.dataframe(faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False))
+
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
