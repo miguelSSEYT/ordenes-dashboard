@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from io import BytesIO
+from datetime import datetime
 
 st.set_page_config(page_title="Ordenes Producibles", layout="wide")
 st.title("📄 Análisis de Producción: COOIS, ZCO41 vs MB52")
@@ -13,93 +14,147 @@ coois_file = st.sidebar.file_uploader("COOIS - Órdenes fijas", type="xlsx")
 zco41_file = st.sidebar.file_uploader("ZCO41 - Nueva demanda", type="xlsx")
 
 if crossref_file and mb52_file and coois_file and zco41_file:
-    crossref = pd.read_excel(crossref_file)
-    mb52 = pd.read_excel(mb52_file)
-    coois = pd.read_excel(coois_file)
-    zco41 = pd.read_excel(zco41_file)
+    st.success("Archivos cargados correctamente")
 
+    today = pd.to_datetime(datetime.today().date())
+
+    # Leer archivos
+    crossref = pd.read_excel(crossref_file, sheet_name=0)
+    mb52 = pd.read_excel(mb52_file, sheet_name=0)
+    coois = pd.read_excel(coois_file, sheet_name=0)
+    zco41 = pd.read_excel(zco41_file, sheet_name=0)
+
+    # Clasificar DC y SS
+    coois['Tipo'] = coois['Material description'].apply(lambda x: 'SS' if isinstance(x, str) and x.strip().endswith('SS') else 'DC')
+    zco41['Tipo'] = zco41['Material description'].apply(lambda x: 'SS' if isinstance(x, str) and x.strip().endswith('SS') else 'DC')
+
+    # Resumen por tipo y cantidad
+    coois['Cantidad'] = coois['Order quantity (GMEIN)']
+    zco41['Cantidad'] = zco41['Pln.Or Qty']
+
+    coois_sum_qty = coois.groupby('Tipo')['Cantidad'].sum().reset_index()
+    coois_sum_qty['Fuente'] = 'COOIS'
+
+    zco41_sum_qty = zco41.groupby('Tipo')['Cantidad'].sum().reset_index()
+    zco41_sum_qty['Fuente'] = 'ZCO41'
+
+    resumen_qty = pd.concat([coois_sum_qty, zco41_sum_qty], ignore_index=True)
+
+    st.header("🔢 Resumen de Vasos SS vs DC")
+    st.subheader("Cantidad Total de Vasos por Tipo")
+    st.dataframe(resumen_qty)
+
+    # Preparar equivalencia
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
-    mb52 = mb52.rename(columns={"Material description": "Material description"})
+    mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
+    mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
-    # Validar referencias existentes
-    all_descriptions = set(mb52['Material description'].unique())
-    missing_ref = all_descriptions - set(crossref['Material description'].unique())
-    if missing_ref:
-        st.error(f"Las siguientes descripciones de MB52 no están en la tabla de equivalencias:\n{missing_ref}")
+    # Verificar referencias no encontradas en MB52
+    referencias_faltantes_mb52 = mb52_custom[mb52_custom['Custom Description'].isna()]['Material description'].dropna().unique()
+
+    # Verificar referencias no encontradas en COOIS y ZCO41
+    referencias_cross = set(crossref['Custom Description'].unique())
+    referencias_coois = set(coois['Material description'].dropna().unique())
+    referencias_zco41 = set(zco41['Material description'].dropna().unique())
+
+    faltantes_coois = sorted(list(referencias_coois - referencias_cross))
+    faltantes_zco41 = sorted(list(referencias_zco41 - referencias_cross))
+
+    # Mostrar todas las referencias faltantes en un resumen visual
+    referencias_no_encontradas = pd.DataFrame({
+        "Fuente": ["MB52"] * len(referencias_faltantes_mb52) + ["COOIS"] * len(faltantes_coois) + ["ZCO41"] * len(faltantes_zco41),
+        "Descripción no encontrada": list(referencias_faltantes_mb52) + faltantes_coois + faltantes_zco41
+    })
+
+    if not referencias_no_encontradas.empty:
+        st.warning("⚠️ Existen descripciones que no están en la tabla de equivalencias. Corrige esto antes de continuar.")
+        st.dataframe(referencias_no_encontradas)
         st.stop()
 
-    coois = coois.rename(columns={"Material description": "Custom Description"})
-    zco41 = zco41.rename(columns={"Material description": "Custom Description"})
+    # Agrupar COOIS y ZCO41
+    coois = coois.rename(columns={'Material description': 'Custom Description'})
+    zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
 
-    all_custom_desc = set(coois['Custom Description'].unique()).union(set(zco41['Custom Description'].unique()))
-    missing_customs = all_custom_desc - set(crossref['Custom Description'].unique())
-    if missing_customs:
-        st.error(f"Las siguientes descripciones CUSTOM no están en la tabla de equivalencias:\n{missing_customs}")
-        st.stop()
+    coois_sum = coois.groupby('Custom Description', as_index=False)['Order quantity (GMEIN)'].sum()
+    zco41_sum = zco41.groupby('Custom Description', as_index=False)['Pln.Or Qty'].sum()
 
-    # Convertir MB52 a Custom
-    mb52 = mb52.merge(crossref, on='Material description', how='left')
-    mb52_grouped = mb52.groupby('Custom Description', as_index=False)['Open Quantity'].sum()
+    # Combinar todo
+    full = mb52_custom[['Custom Description', 'Material description', 'Open Quantity']].merge(coois_sum, on='Custom Description', how='left')\
+        .merge(zco41_sum, on='Custom Description', how='left').fillna(0)
 
-    # COOIS y ZCO41 agrupados
-    coois_grouped = coois.groupby(['Sales Order', 'Custom Description'], as_index=False)['Order quantity (GMEIN)'].sum()
-    zco41_grouped = zco41.groupby(['Sales Order', 'Custom Description'], as_index=False)['Pln.Or Qty'].sum()
+    full['Available after COOIS'] = full['Open Quantity'] - full['Order quantity (GMEIN)']
+    full['Available after ALL'] = full['Available after COOIS'] - full['Pln.Or Qty']
 
-    today = pd.to_datetime(date.today())
+    # Evaluar ZCO41 por línea
+    zco41_eval = zco41.merge(full[['Custom Description', 'Available after COOIS']], on='Custom Description', how='left')
+    zco41_eval['Available after COOIS'] = zco41_eval['Available after COOIS'].fillna(0)
+    zco41_eval['Can Produce'] = zco41_eval['Pln.Or Qty'] <= zco41_eval['Available after COOIS']
 
-    # ZCO41 análisis por línea
-    zco41_merged = zco41_grouped.merge(mb52_grouped, on='Custom Description', how='left')
-    zco41_merged['Disponibilidad'] = zco41_merged['Open Quantity'] - zco41_merged['Pln.Or Qty']
-    zco41_merged['Puede importar'] = zco41_merged['Disponibilidad'] >= 0
+    # Evaluar COOIS por línea
+    coois_eval = coois.merge(full[['Custom Description', 'Open Quantity']], on='Custom Description', how='left')
+    coois_eval['Open Quantity'] = coois_eval['Open Quantity'].fillna(0)
+    coois_eval['Can Produce'] = coois_eval['Order quantity (GMEIN)'] <= coois_eval['Open Quantity']
 
-    # COOIS análisis por línea
-    coois_merged = coois_grouped.merge(mb52_grouped, on='Custom Description', how='left')
-    coois_merged['Disponibilidad'] = coois_merged['Open Quantity'] - coois_merged['Order quantity (GMEIN)']
-    coois_merged['Puede producir'] = coois_merged['Disponibilidad'] >= 0
+    # Evaluación por orden completa (Sales Order)
+    zco41_orders = zco41_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
+    coois_orders = coois_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
 
-    # ZCO41 past due y SS
-    zco41_dates = zco41[['Sales Order', 'Custom Description', 'Estimated Ship Date']].drop_duplicates()
-    zco41_dates['Estimated Ship Date'] = pd.to_datetime(zco41_dates['Estimated Ship Date'], errors='coerce')
-    zco41_full = zco41_merged.merge(zco41_dates, on=['Sales Order', 'Custom Description'], how='left')
-    zco41_past_due_ss = zco41_full[(~zco41_full['Puede importar']) & 
-                                   (zco41_full['Custom Description'].str.endswith("SS")) &
-                                   (zco41_full['Estimated Ship Date'] < today)]
-
-    # Lista general de materiales faltantes
-    coois_needs = coois_merged[~coois_merged['Puede producir']].copy()
-    zco41_needs = zco41_merged[~zco41_merged['Puede importar']].copy()
-    coois_needs['Faltante'] = coois_needs['Order quantity (GMEIN)'] - coois_needs['Open Quantity']
-    zco41_needs['Faltante'] = zco41_needs['Pln.Or Qty'] - zco41_needs['Open Quantity']
-    total_needs = pd.concat([
-        coois_needs[['Custom Description', 'Faltante']],
-        zco41_needs[['Custom Description', 'Faltante']]
-    ]).groupby('Custom Description', as_index=False).sum()
+    zco41_eval = zco41_eval.merge(zco41_orders, on='Sales Order', suffixes=('', '_order'))
+    coois_eval = coois_eval.merge(coois_orders, on='Sales Order', suffixes=('', '_order'))
 
     # Mostrar resultados
-    with st.expander("✅ Órdenes que sí se pueden importar de ZCO41"):
-        st.dataframe(zco41_merged[zco41_merged['Puede importar']], use_container_width=True)
+    st.header("📊 Resultados del Análisis")
 
-    with st.expander("❌ Órdenes que NO se pueden importar de ZCO41"):
-        for order in zco41_merged[~zco41_merged['Puede importar']]['Sales Order'].unique():
-            sub = zco41_merged[(zco41_merged['Sales Order'] == order)]
-            total_lines = len(sub)
-            not_importable = sub[~sub['Puede importar']]
-            st.write(f"Orden {order} tiene {total_lines} líneas, de las cuales {len(not_importable)} no se pueden importar por falta de inventario:")
-            st.dataframe(not_importable, use_container_width=True)
+    with st.expander("ZCO41 - Órdenes COMPLETAS que SÍ se pueden producir"):
+        st.dataframe(zco41_eval[zco41_eval['Can Produce_order']])
 
-    with st.expander("❌ Órdenes de COOIS que NO se pueden producir"):
-        for order in coois_merged[~coois_merged['Puede producir']]['Sales Order'].unique():
-            sub = coois_merged[(coois_merged['Sales Order'] == order)]
-            total_lines = len(sub)
-            not_producible = sub[~sub['Puede producir']]
-            st.write(f"Orden {order} tiene {total_lines} líneas, de las cuales {len(not_producible)} no se pueden producir por falta de inventario:")
-            st.dataframe(not_producible, use_container_width=True)
+    with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
+        df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
+        df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+        ) if row['Pln.Or Qty'] > row['Available after COOIS'] else (
+            "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
+        ), axis=1)
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
-    with st.expander("⏰ Past Due de ZCO41 - Solo vasos SS que NO se pueden producir"):
-        st.dataframe(zco41_past_due_ss[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Open Quantity', 'Estimated Ship Date', 'Disponibilidad']], use_container_width=True)
+    with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
+        df = coois_eval[~coois_eval['Can Produce_order']].copy()
+        df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+            " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+        ) if row['Order quantity (GMEIN)'] > row['Open Quantity'] else (
+            "Sales Order " + str(row['Sales Order']) + " has sufficient inventory for '" + row['Custom Description'] + "'."
+        ), axis=1)
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 
-    with st.expander("📦 Lista General de Productos Faltantes"):
-        st.dataframe(total_needs, use_container_width=True)
+    with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
+        zco41_past_due = zco41_eval[(~zco41_eval['Can Produce_order']) & (pd.to_datetime(zco41_eval['Estimated Ship Date']) < today)]
+        coois_past_due = coois_eval[(~coois_eval['Can Produce_order']) & (pd.to_datetime(coois_eval['Est. Ship Date']) < today)]
+        st.subheader("ZCO41 - Past Due")
+        st.dataframe(zco41_past_due)
+        st.subheader("COOIS - Past Due")
+        st.dataframe(coois_past_due)
+
+    with st.expander("📦 Material Requerido para Cumplir Producción"):
+        coois_eval['Cantidad Faltante'] = coois_eval['Order quantity (GMEIN)'] - coois_eval['Open Quantity']
+        zco41_eval['Cantidad Faltante'] = zco41_eval['Pln.Or Qty'] - zco41_eval['Available after COOIS']
+
+        faltantes_total = pd.concat([
+            coois_eval[~coois_eval['Can Produce']][['Custom Description', 'Cantidad Faltante']],
+            zco41_eval[~zco41_eval['Can Produce']][['Custom Description', 'Cantidad Faltante']]
+        ])
+
+        faltantes_grouped = faltantes_total.groupby('Custom Description', as_index=False).sum()
+        faltantes_grouped = faltantes_grouped[faltantes_grouped['Cantidad Faltante'] > 0]
+
+        faltantes_con_non_custom = faltantes_grouped.merge(crossref, left_on='Custom Description', right_on='Custom Description', how='left')
+        faltantes_con_non_custom = faltantes_con_non_custom[['Custom Description', 'Material description', 'Cantidad Faltante']]
+        st.dataframe(faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False))
 
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
