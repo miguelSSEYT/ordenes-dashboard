@@ -88,42 +88,39 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_stock = coois.merge(full[['Custom Description', 'Open Quantity']], on='Custom Description', how='left')
     coois_stock['Enough'] = coois_stock['Order quantity (GMEIN)'] <= coois_stock['Open Quantity']
     coois_stock['Shortage'] = coois_stock['Order quantity (GMEIN)'] - coois_stock['Open Quantity']
-    coois_explain = coois_stock[~coois_stock['Enough'] & (coois_stock['Shortage'] > 0)][['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Shortage']]
 
-    coois_group = coois_stock.groupby('Sales Order')['Enough'].all().reset_index()
-    coois_group['Producible'] = coois_group['Enough']
-    coois_final = coois_stock.merge(coois_group[['Sales Order', 'Producible']], on='Sales Order', how='left')
+    # Mensajes explicativos para COOIS
+    coois_messages = []
+    for _, row in coois_stock.iterrows():
+        if row['Enough']:
+            coois_messages.append(f"✅ This line can be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Order quantity (GMEIN)']:.0f}")
+        else:
+            coois_messages.append(f"❌ This line cannot be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Order quantity (GMEIN)']:.0f}, Inventory: {row['Open Quantity']:.0f} → Shortage: {row['Shortage']:.0f}")
+
+    with st.expander("🧾 COOIS - Línea por línea"):
+        for msg in coois_messages:
+            st.write(msg)
 
     # ZCO41 producibles y no producibles
     zco41_stock = zco41.merge(full[['Custom Description', 'Available after COOIS']], on='Custom Description', how='left')
     zco41_stock['Enough'] = zco41_stock['Pln.Or Qty'] <= zco41_stock['Available after COOIS']
     zco41_stock['Shortage'] = zco41_stock['Pln.Or Qty'] - zco41_stock['Available after COOIS']
-    zco41_explain = zco41_stock[~zco41_stock['Enough'] & (zco41_stock['Shortage'] > 0)][['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Shortage']]
 
-    zco41_group = zco41_stock.groupby('Sales Order')['Enough'].all().reset_index()
-    zco41_group['Producible'] = zco41_group['Enough']
-    zco41_final = zco41_stock.merge(zco41_group[['Sales Order', 'Producible']], on='Sales Order', how='left')
+    # Mensajes explicativos para ZCO41
+    zco41_messages = []
+    for _, row in zco41_stock.iterrows():
+        if row['Enough']:
+            zco41_messages.append(f"✅ This line can be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Pln.Or Qty']:.0f}")
+        else:
+            zco41_messages.append(f"❌ This line cannot be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Pln.Or Qty']:.0f}, Inventory: {row['Available after COOIS']:.0f} → Shortage: {row['Shortage']:.0f}")
 
-    # Mostrar resultados
-    st.subheader("✅ Órdenes de ZCO41 que SÍ se pueden producir")
-    st.dataframe(zco41_final[zco41_final['Producible']], use_container_width=True)
-
-    st.subheader("❌ Órdenes de ZCO41 que NO se pueden producir")
-    st.dataframe(zco41_final[~zco41_final['Producible']], use_container_width=True)
-
-    st.subheader("❌ Órdenes de COOIS que NO se pueden producir")
-    st.dataframe(coois_final[~coois_final['Producible']], use_container_width=True)
-
-    # Explicación por qué no se puede producir
-    st.subheader("🔍 Detalle de faltantes en COOIS")
-    st.dataframe(coois_explain, use_container_width=True)
-
-    st.subheader("🔍 Detalle de faltantes en ZCO41")
-    st.dataframe(zco41_explain, use_container_width=True)
+    with st.expander("🧾 ZCO41 - Línea por línea"):
+        for msg in zco41_messages:
+            st.write(msg)
 
     # Past Due Orders (ZCO41 y COOIS)
-    coois_past_due = coois_final[(~coois_final['Producible']) & (pd.to_datetime(coois_final['Est. Ship Date']) < today)]
-    zco41_past_due = zco41_final[(~zco41_final['Producible']) & (pd.to_datetime(zco41_final['Estimated Ship Date']) < today)]
+    coois_past_due = coois_stock[(~coois_stock['Enough']) & (pd.to_datetime(coois['Est. Ship Date']) < today)]
+    zco41_past_due = zco41_stock[(~zco41_stock['Enough']) & (pd.to_datetime(zco41['Estimated Ship Date']) < today)]
 
     st.subheader("⏰ Órdenes Past Due que NO se pueden producir (ZCO41)")
     st.dataframe(zco41_past_due, use_container_width=True)
