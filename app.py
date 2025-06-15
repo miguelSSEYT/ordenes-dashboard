@@ -49,6 +49,13 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
     mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
+    # Verificar referencias no encontradas
+    referencias_faltantes = mb52_custom[mb52_custom['Custom Description'].isna()]['Material description'].unique()
+    if len(referencias_faltantes) > 0:
+        st.warning("⚠️ Las siguientes descripciones de MB52 no se encontraron en la tabla de equivalencias:")
+        st.dataframe(pd.DataFrame(referencias_faltantes, columns=['Material description']))
+        st.stop()
+
     # Agrupar COOIS y ZCO41
     coois = coois.rename(columns={'Material description': 'Custom Description'})
     zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
