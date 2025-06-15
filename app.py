@@ -50,28 +50,25 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
     # Verificar referencias no encontradas en MB52
-    referencias_faltantes_mb52 = mb52_custom[mb52_custom['Custom Description'].isna()]['Material description'].unique()
-    if len(referencias_faltantes_mb52) > 0:
-        st.warning("⚠️ Las siguientes descripciones de MB52 no se encontraron en la tabla de equivalencias:")
-        st.dataframe(pd.DataFrame(referencias_faltantes_mb52, columns=['Material description']))
-        st.stop()
+    referencias_faltantes_mb52 = mb52_custom[mb52_custom['Custom Description'].isna()]['Material description'].dropna().unique()
 
     # Verificar referencias no encontradas en COOIS y ZCO41
     referencias_cross = set(crossref['Custom Description'].unique())
-    referencias_coois = set(coois['Material description'].unique())
-    referencias_zco41 = set(zco41['Material description'].unique())
+    referencias_coois = set(coois['Material description'].dropna().unique())
+    referencias_zco41 = set(zco41['Material description'].dropna().unique())
 
     faltantes_coois = sorted(list(referencias_coois - referencias_cross))
     faltantes_zco41 = sorted(list(referencias_zco41 - referencias_cross))
 
-    if faltantes_coois:
-        st.warning("⚠️ Las siguientes descripciones de COOIS no se encontraron en la tabla de equivalencias:")
-        st.dataframe(pd.DataFrame(faltantes_coois, columns=['Material description']))
-        st.stop()
+    # Mostrar todas las referencias faltantes en un resumen visual
+    referencias_no_encontradas = pd.DataFrame({
+        "Fuente": ["MB52"] * len(referencias_faltantes_mb52) + ["COOIS"] * len(faltantes_coois) + ["ZCO41"] * len(faltantes_zco41),
+        "Descripción no encontrada": list(referencias_faltantes_mb52) + faltantes_coois + faltantes_zco41
+    })
 
-    if faltantes_zco41:
-        st.warning("⚠️ Las siguientes descripciones de ZCO41 no se encontraron en la tabla de equivalencias:")
-        st.dataframe(pd.DataFrame(faltantes_zco41, columns=['Material description']))
+    if not referencias_no_encontradas.empty:
+        st.warning("⚠️ Existen descripciones que no están en la tabla de equivalencias. Corrige esto antes de continuar.")
+        st.dataframe(referencias_no_encontradas)
         st.stop()
 
     # Agrupar COOIS y ZCO41
