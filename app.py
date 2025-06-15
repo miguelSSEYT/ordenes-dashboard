@@ -34,22 +34,15 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     coois_sum_qty = coois.groupby('Tipo')['Cantidad'].sum().reset_index()
     coois_sum_qty['Fuente'] = 'COOIS'
-    coois_lineas = coois['Tipo'].value_counts().reset_index()
-    coois_lineas.columns = ['Tipo', 'Lineas']
 
     zco41_sum_qty = zco41.groupby('Tipo')['Cantidad'].sum().reset_index()
     zco41_sum_qty['Fuente'] = 'ZCO41'
-    zco41_lineas = zco41['Tipo'].value_counts().reset_index()
-    zco41_lineas.columns = ['Tipo', 'Lineas']
 
     resumen_qty = pd.concat([coois_sum_qty, zco41_sum_qty], ignore_index=True)
-    resumen_lineas = pd.concat([coois_lineas.assign(Fuente='COOIS'), zco41_lineas.assign(Fuente='ZCO41')], ignore_index=True)
 
     st.header("🔢 Resumen de Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
     st.dataframe(resumen_qty)
-    st.subheader("Cantidad de Líneas por Tipo")
-    st.dataframe(resumen_lineas)
 
     # Preparar equivalencia
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
