@@ -37,6 +37,9 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     full['Available after COOIS'] = full['Open Quantity'] - full['Order quantity (GMEIN)']
     full['Available after ALL'] = full['Available after COOIS'] - full['Pln.Or Qty']
 
+    st.subheader("📦 Inventario Neto por Material")
+    st.dataframe(full[['Custom Description', 'Open Quantity', 'Order quantity (GMEIN)', 'Pln.Or Qty', 'Available after COOIS', 'Available after ALL']], use_container_width=True)
+
     today = pd.to_datetime(date.today())
 
     coois = coois.merge(full[['Custom Description', 'Open Quantity']], on='Custom Description', how='left')
@@ -45,23 +48,30 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois['Enough'] = coois['Order quantity (GMEIN)'] <= coois['Open Quantity']
     zco41['Enough'] = zco41['Pln.Or Qty'] <= zco41['Available after COOIS']
 
-    with st.expander("✅ COOIS - Producibles"):
-        for _, row in coois[coois['Enough']].iterrows():
-            st.write(f"✅ This line can be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Order quantity (GMEIN)']:.0f}")
+    coois['Shortage'] = coois['Order quantity (GMEIN)'] - coois['Open Quantity']
+    zco41['Shortage'] = zco41['Pln.Or Qty'] - zco41['Available after COOIS']
 
-    with st.expander("❌ COOIS - No Producibles"):
-        for _, row in coois[~coois['Enough']].iterrows():
-            shortage = row['Order quantity (GMEIN)'] - row['Open Quantity']
-            st.write(f"❌ This line cannot be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Order quantity (GMEIN)']:.0f}, Inventory: {row['Open Quantity']:.0f} → Shortage: {shortage:.0f}")
+    st.subheader("✅ COOIS - Órdenes que se pueden producir")
+    st.dataframe(coois[coois['Enough']][['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity']], use_container_width=True)
 
-    with st.expander("✅ ZCO41 - Producibles"):
-        for _, row in zco41[zco41['Enough']].iterrows():
-            st.write(f"✅ This line can be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Pln.Or Qty']:.0f}")
+    st.subheader("❌ COOIS - Órdenes que NO se pueden producir")
+    st.dataframe(coois[~coois['Enough']][['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Shortage']], use_container_width=True)
 
-    with st.expander("❌ ZCO41 - No Producibles"):
-        for _, row in zco41[~zco41['Enough']].iterrows():
-            shortage = row['Pln.Or Qty'] - row['Available after COOIS']
-            st.write(f"❌ This line cannot be produced: Order {row['Sales Order']} - {row['Custom Description']} - Qty: {row['Pln.Or Qty']:.0f}, Inventory: {row['Available after COOIS']:.0f} → Shortage: {shortage:.0f}")
+    st.subheader("✅ ZCO41 - Órdenes que se pueden producir")
+    st.dataframe(zco41[zco41['Enough']][['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS']], use_container_width=True)
+
+    st.subheader("❌ ZCO41 - Órdenes que NO se pueden producir")
+    st.dataframe(zco41[~zco41['Enough']][['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Shortage']], use_container_width=True)
+
+    st.subheader("⏰ Órdenes Past Due que NO se pueden producir (COOIS)")
+    coois['Est. Ship Date'] = pd.to_datetime(coois['Est. Ship Date'], errors='coerce')
+    past_due_coois = coois[(~coois['Enough']) & (coois['Est. Ship Date'] < today)]
+    st.dataframe(past_due_coois[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Est. Ship Date', 'Shortage']], use_container_width=True)
+
+    st.subheader("⏰ Órdenes Past Due que NO se pueden producir (ZCO41)")
+    zco41['Estimated Ship Date'] = pd.to_datetime(zco41['Estimated Ship Date'], errors='coerce')
+    past_due_zco41 = zco41[(~zco41['Enough']) & (zco41['Estimated Ship Date'] < today)]
+    st.dataframe(past_due_zco41[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Estimated Ship Date', 'Shortage']], use_container_width=True)
 
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
