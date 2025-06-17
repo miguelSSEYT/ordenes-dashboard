@@ -62,11 +62,11 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     
     st.header("🆚 Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
-    st.dataframe(resumen_qty)
+    st.dataframe(resumen_qty.style.format({"Cantidad": "{:,.0f}"}))
     
     st.header("🔢 Tipo de Orden")
     st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
-    st.dataframe(resumen_ordenes)
+    st.dataframe(resumen_ordenes.style.format({"Cantidad": "{:,.0f}"}))
     
     # Preparar equivalencia
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
