@@ -132,8 +132,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
             if row['Available after COOIS'] >= row['Pln.Or Qty']
             else "Cannot be produced — not enough inventory"
         ), axis=1)
-    st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty',
-                     'Available after COOIS', 'Net Inventory', 'Reason']])
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
     
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
