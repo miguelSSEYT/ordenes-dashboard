@@ -21,19 +21,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     # Leer archivos
     crossref = pd.read_excel(crossref_file, sheet_name=0)
     mb52 = pd.read_excel(mb52_file, sheet_name=0)
-    coois_raw = pd.read_excel(coois_file, sheet_name=0)
-    coois_raw.columns = coois_raw.columns.str.strip()
-
-    rename_map = {}
-    for col in coois_raw.columns:
-        if 'Master Material Description' in col:
-            rename_map[col] = 'Material description'
-        elif 'Order Quantity' in col and 'Item' in col:
-            rename_map[col] = 'Order quantity (GMEIN)'
-        elif 'Estimated Ship Date' in col:
-            rename_map[col] = 'Est. Ship Date'
-
-    coois = coois_raw.rename(columns=rename_map)
+    coois = pd.read_excel(coois_file, sheet_name=0)
     zco41 = pd.read_excel(zco41_file, sheet_name=0)
 
     # Clasificar DC y SS
@@ -102,12 +90,6 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_eval['Can Produce'] = coois_eval['Order quantity (GMEIN)'] <= coois_eval['Open Quantity']
 
     zco41_orders = zco41_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
-    if 'Sales Order' not in coois_eval.columns:
-        if 'Sales document' in coois_eval.columns:
-            coois_eval = coois_eval.rename(columns={'Sales document': 'Sales Order'})
-        else:
-            st.error("❌ La columna 'Sales Order' (o 'Sales document') no fue encontrada en el archivo ZVA05 MES. Verifica el encabezado.")
-            st.stop()
     coois_orders = coois_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
 
     zco41_eval = zco41_eval.merge(zco41_orders, on='Sales Order', suffixes=('', '_order'))
@@ -121,31 +103,21 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
-        def safe_reason(row):
-    try:
-        qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
-        inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
-        shortage = qty - inv
-        return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
-    except Exception as e:
-        return f"Error generating reason: {e}"
-
-df['Reason'] = df.apply(safe_reason, axis=1)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
-        def safe_reason(row):
-    try:
-        qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
-        inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
-        shortage = qty - inv
-        return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
-    except Exception as e:
-        return f"Error generating reason: {e}"
-
-df['Reason'] = df.apply(safe_reason, axis=1)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+            " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 
     with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
@@ -200,7 +172,7 @@ df['Reason'] = df.apply(safe_reason, axis=1)
         zco41_past_due.to_excel(writer, sheet_name='ZCO41 Past Due', index=False)
         coois_past_due.to_excel(writer, sheet_name='COOIS Past Due', index=False)
         faltantes_sorted.to_excel(writer, sheet_name='Material Faltante', index=False)
-        
+        writer.save()
 
     st.download_button(
         label="📥 Descargar análisis completo en Excel",
