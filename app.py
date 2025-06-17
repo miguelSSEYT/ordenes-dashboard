@@ -22,11 +22,18 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     crossref = pd.read_excel(crossref_file, sheet_name=0)
     mb52 = pd.read_excel(mb52_file, sheet_name=0)
     coois_raw = pd.read_excel(coois_file, sheet_name=0)
-    coois = coois_raw.rename(columns={
-        'Master Material Description': 'Material description',
-        'Order Quantity (Item)': 'Order quantity (GMEIN)',
-        'Estimated Ship Date (header)': 'Est. Ship Date'
-    })
+    coois_raw.columns = coois_raw.columns.str.strip()
+
+    rename_map = {}
+    for col in coois_raw.columns:
+        if 'Master Material Description' in col:
+            rename_map[col] = 'Material description'
+        elif 'Order Quantity' in col and 'Item' in col:
+            rename_map[col] = 'Order quantity (GMEIN)'
+        elif 'Estimated Ship Date' in col:
+            rename_map[col] = 'Est. Ship Date'
+
+    coois = coois_raw.rename(columns=rename_map)
     zco41 = pd.read_excel(zco41_file, sheet_name=0)
 
     # Clasificar DC y SS
