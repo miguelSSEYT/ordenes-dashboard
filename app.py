@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
-import xlsxwriter
 
 st.set_page_config(page_title="Ordenes Producibles", layout="wide")
 st.title("📄 Análisis de Producción: COOIS, ZCO41 vs MB52")
@@ -153,7 +152,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     faltantes_sorted = faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False)
 
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
         zco41_ok.to_excel(writer, sheet_name='ZCO41 - OK', index=False)
         zco41_nok.to_excel(writer, sheet_name='ZCO41 - NOK', index=False)
         coois_nok.to_excel(writer, sheet_name='COOIS - NOK', index=False)
