@@ -124,7 +124,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que SÍ se pueden producir"):
         st.dataframe(zco41_eval[zco41_eval['Can Produce_order']])
     
-    with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
+    with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir", expanded=False):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
         df['Reason'] = df.apply(lambda row: (
