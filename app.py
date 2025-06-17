@@ -160,11 +160,13 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_nok = coois_eval[~coois_eval['Can Produce_order']].copy()
     coois_nok['Net Inventory'] = coois_nok['Open Quantity'] - coois_nok['Order Quantity (Item)']
     coois_nok['Reason'] = coois_nok.apply(lambda row: (
-        "Sales document " + str(row['Sales document']) + " needs " + str(int(row['Order Quantity (Item)'])) +
-        " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
-        " are available. Shortage: " + str(int(row['Order Quantity (Item)'] - row['Open Quantity']))
-    ), axis=1)
-
+    "Sales document " + str(row['Sales document']) +
+    " needs " + (str(int(row['Order Quantity (Item)'])) if pd.notnull(row['Order Quantity (Item)']) else "N/A") +
+    " units of '" + str(row['Custom Description']) + "', but only " +
+    (str(int(row['Open Quantity'])) if pd.notnull(row['Open Quantity']) else "N/A") +
+    " are available. Shortage: " +
+    (str(int(row['Order Quantity (Item)'] - row['Open Quantity'])) if pd.notnull(row['Order Quantity (Item)']) and pd.notnull(row['Open Quantity']) else "N/A")
+), axis=1)
     faltantes_sorted = faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False)
 
     output = BytesIO()
