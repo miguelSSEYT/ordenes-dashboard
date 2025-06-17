@@ -90,10 +90,10 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_eval['Can Produce'] = coois_eval['Order Quantity (Item)'] <= coois_eval['Open Quantity']
 
     zco41_orders = zco41_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
-    coois_orders = coois_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
+    coois_orders = coois_eval.groupby('Sales document')['Can Produce'].all().reset_index()
 
     zco41_eval = zco41_eval.merge(zco41_orders, on='Sales Order', suffixes=('', '_order'))
-    coois_eval = coois_eval.merge(coois_orders, on='Sales Order', suffixes=('', '_order'))
+    coois_eval = coois_eval.merge(coois_orders, on='Sales document', suffixes=('', '_order'))
 
     st.header("📊 Resultados del Análisis")
 
