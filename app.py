@@ -160,7 +160,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_nok = coois_eval[~coois_eval['Can Produce_order']].copy()
     coois_nok['Net Inventory'] = coois_nok['Open Quantity'] - coois_nok['Order Quantity (Item)']
     coois_nok['Reason'] = coois_nok.apply(lambda row: (
-        "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order Quantity (Item)'])) +
+        "Sales document " + str(row['Sales document']) + " needs " + str(int(row['Order Quantity (Item)'])) +
         " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
         " are available. Shortage: " + str(int(row['Order Quantity (Item)'] - row['Open Quantity']))
     ), axis=1)
