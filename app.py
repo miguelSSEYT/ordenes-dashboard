@@ -21,7 +21,12 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     # Leer archivos
     crossref = pd.read_excel(crossref_file, sheet_name=0)
     mb52 = pd.read_excel(mb52_file, sheet_name=0)
-    coois = pd.read_excel(coois_file, sheet_name=0)
+    coois_raw = pd.read_excel(coois_file, sheet_name=0)
+    coois = coois_raw.rename(columns={
+        'Master Material Description': 'Material description',
+        'Order Quantity (Item)': 'Order quantity (GMEIN)',
+        'Estimated Ship Date (header)': 'Est. Ship Date'
+    })
     zco41 = pd.read_excel(zco41_file, sheet_name=0)
 
     # Clasificar DC y SS
