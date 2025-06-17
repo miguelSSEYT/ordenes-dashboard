@@ -121,20 +121,20 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
-        df['Reason'] = df.apply(lambda row: (
-            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
-            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
-            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+        df.loc[:, 'Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row.get('Available after COOIS', row.get('Open Quantity', 0)))) +
+            " are available. Shortage: " + str(int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)) - row.get('Available after COOIS', row.get('Open Quantity', 0))))
         ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
-        df['Reason'] = df.apply(lambda row: (
-            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
-            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
-            " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+        df.loc[:, 'Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row.get('Available after COOIS', row.get('Open Quantity', 0)))) +
+            " are available. Shortage: " + str(int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)) - row.get('Available after COOIS', row.get('Open Quantity', 0))))
         ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 
