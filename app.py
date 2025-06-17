@@ -40,7 +40,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     resumen_qty = pd.concat([coois_sum_qty, zco41_sum_qty], ignore_index=True)
 
-     coois['Sales office'] = coois['Sales office'].fillna('null')
+    coois['Sales office'] = coois['Sales office'].fillna('null')
     zco41['Sales office'] = zco41['Sales office'].fillna('null')
 
     coois_office_summary = coois.groupby('Sales office')['Order Quantity (Item)'].sum().reset_index()
@@ -59,7 +59,6 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     })
 
     resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
-
 
     st.header("🔢 Resumen de Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
