@@ -125,7 +125,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
         zco41_past_due = zco41_eval[(~zco41_eval['Can Produce_order']) & (pd.to_datetime(zco41_eval['Estimated Ship Date']) < today)]
-        coois_past_due = coois_eval[(~coois_eval['Can Produce_order']) & (pd.to_datetime(coois_eval['Est. Ship Date']) < today)]
+        coois_past_due = coois_eval[(~coois_eval['Can Produce_order']) & (pd.to_datetime(coois_eval['Estimated Ship Date (header)']) < today)]
         st.subheader("ZCO41 - Past Due")
         st.dataframe(zco41_past_due)
         st.subheader("COOIS - Past Due")
