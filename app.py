@@ -172,7 +172,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         zco41_past_due.to_excel(writer, sheet_name='ZCO41 Past Due', index=False)
         coois_past_due.to_excel(writer, sheet_name='COOIS Past Due', index=False)
         faltantes_sorted.to_excel(writer, sheet_name='Material Faltante', index=False)
-        writer.save()
+        
 
     st.download_button(
         label="📥 Descargar análisis completo en Excel",
