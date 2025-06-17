@@ -40,9 +40,34 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     resumen_qty = pd.concat([coois_sum_qty, zco41_sum_qty], ignore_index=True)
 
+     coois['Sales office'] = coois['Sales office'].fillna('null')
+    zco41['Sales office'] = zco41['Sales office'].fillna('null')
+
+    coois_office_summary = coois.groupby('Sales office')['Order Quantity (Item)'].sum().reset_index()
+    coois_office_summary['Fuente'] = 'COOIS'
+
+    zco41_office_summary = zco41.groupby('Sales office')['Pln.Or Qty'].sum().reset_index()
+    zco41_office_summary['Fuente'] = 'ZCO41'
+
+    coois_office_summary = coois_office_summary.rename(columns={
+        'Sales office': 'Tipo de Orden',
+        'Order Quantity (Item)': 'Cantidad'
+    })
+    zco41_office_summary = zco41_office_summary.rename(columns={
+        'Sales office': 'Tipo de Orden',
+        'Pln.Or Qty': 'Cantidad'
+    })
+
+    resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
+
+
     st.header("🔢 Resumen de Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
     st.dataframe(resumen_qty)
+
+st.header("🏷️ Resumen por Tipo de Orden")
+    st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
+    st.dataframe(resumen_ordenes)
 
     # Preparar equivalencia
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
