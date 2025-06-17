@@ -60,11 +60,11 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     
     resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
     
-    st.header("🔢 Resumen de Vasos SS vs DC")
+    st.header("🆚 Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
     st.dataframe(resumen_qty)
     
-    st.header("🏷️ Resumen por Tipo de Orden")
+    st.header("🔢 Tipo de Orden")
     st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
     st.dataframe(resumen_ordenes)
     
@@ -147,7 +147,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     ), axis=1)
         st.dataframe(df[['Sales document', 'Custom Description', 'Order Quantity (Item)', 'Open Quantity', 'Net Inventory', 'Reason']])
     
-    with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
+    with st.expander("Past Due - ZCO41 y COOIS que NO se pueden producir"):
         zco41_past_due = zco41_eval[(~zco41_eval['Can Produce_order']) & (pd.to_datetime(zco41_eval['Estimated Ship Date']) < today)]
         coois_past_due = coois_eval[(~coois_eval['Can Produce_order']) & (pd.to_datetime(coois_eval['Estimated Ship Date (header)']) < today)]
         st.subheader("ZCO41 - Past Due")
@@ -155,7 +155,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         st.subheader("COOIS - Past Due")
         st.dataframe(coois_past_due)
     
-    with st.expander("📦 Material Requerido para Cumplir Producción"):
+    with st.expander("Material Requerido para Cumplir Producción"):
         coois_eval['Cantidad Faltante'] = coois_eval['Order Quantity (Item)'] - coois_eval['Open Quantity']
         zco41_eval['Cantidad Faltante'] = zco41_eval['Pln.Or Qty'] - zco41_eval['Available after COOIS']
     
@@ -204,7 +204,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         output.seek(0)
     
     st.download_button(
-        label="📥 Descargar análisis completo en Excel",
+        label="Descargar análisis completo en Excel",
         data=output.getvalue(),
         file_name="analisis_produccion.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
