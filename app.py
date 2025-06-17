@@ -49,10 +49,8 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
     mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
-    # Verificar referencias no encontradas en MB52
+    # Verificar referencias no encontradas
     referencias_faltantes_mb52 = mb52_custom[mb52_custom['Custom Description'].isna()]['Material description'].dropna().unique()
-
-    # Verificar referencias no encontradas en COOIS y ZCO41
     referencias_cross = set(crossref['Custom Description'].unique())
     referencias_coois = set(coois['Material description'].dropna().unique())
     referencias_zco41 = set(zco41['Material description'].dropna().unique())
@@ -70,6 +68,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         st.dataframe(referencias_no_encontradas)
         st.stop()
 
+    # Agrupar COOIS y ZCO41
     coois = coois.rename(columns={'Material description': 'Custom Description'})
     zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
 
@@ -129,7 +128,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         st.subheader("COOIS - Past Due")
         st.dataframe(coois_past_due)
 
-    with st.expander("🚞 Material Requerido para Cumplir Producción"):
+    with st.expander("📦 Material Requerido para Cumplir Producción"):
         coois_eval['Cantidad Faltante'] = coois_eval['Order quantity (GMEIN)'] - coois_eval['Open Quantity']
         zco41_eval['Cantidad Faltante'] = zco41_eval['Pln.Or Qty'] - zco41_eval['Available after COOIS']
 
@@ -145,10 +144,24 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         faltantes_con_non_custom = faltantes_con_non_custom[['Custom Description', 'Material description', 'Cantidad Faltante']]
         st.dataframe(faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False))
 
-    # Exportación a Excel con varias hojas
+    # Recalcular columnas necesarias para exportación
     zco41_ok = zco41_eval[zco41_eval['Can Produce_order']]
-    zco41_nok = zco41_eval[~zco41_eval['Can Produce_order']][['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']]
-    coois_nok = coois_eval[~coois_eval['Can Produce_order']][['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']]
+    zco41_nok = zco41_eval[~zco41_eval['Can Produce_order']].copy()
+    zco41_nok['Net Inventory'] = zco41_nok['Available after COOIS'] - zco41_nok['Pln.Or Qty']
+    zco41_nok['Reason'] = zco41_nok.apply(lambda row: (
+        "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+        " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+        " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+    ), axis=1)
+
+    coois_nok = coois_eval[~coois_eval['Can Produce_order']].copy()
+    coois_nok['Net Inventory'] = coois_nok['Open Quantity'] - coois_nok['Order quantity (GMEIN)']
+    coois_nok['Reason'] = coois_nok.apply(lambda row: (
+        "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+        " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+        " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+    ), axis=1)
+
     faltantes_sorted = faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False)
 
     output = BytesIO()
@@ -162,7 +175,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         writer.save()
 
     st.download_button(
-        label="Descargar análisis completo",
+        label="📥 Descargar análisis completo en Excel",
         data=output.getvalue(),
         file_name="analisis_produccion.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
