@@ -21,14 +21,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     # Leer archivos
     crossref = pd.read_excel(crossref_file, sheet_name=0)
     mb52 = pd.read_excel(mb52_file, sheet_name=0)
-    coois_raw = pd.read_excel(coois_file, sheet_name=0)
-    coois_raw.columns = coois_raw.columns.str.strip()
-    coois = coois_raw.rename(columns={
-        'Master Material Description': 'Material description',
-        'Order Quantity (Item)': 'Order quantity (GMEIN)',
-        'Sales document': 'Sales Order',
-        'Estimated Ship Date (header)': 'Est. Ship Date'
-    })
+    coois = pd.read_excel(coois_file, sheet_name=0)
     zco41 = pd.read_excel(zco41_file, sheet_name=0)
 
     # Clasificar DC y SS
@@ -110,31 +103,21 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
-        def generar_reason(row):
-    try:
-        qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
-        inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
-        shortage = qty - inv
-        return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
-    except Exception as e:
-        return f"Error: {e}"
-
-df['Reason'] = df.apply(generar_reason, axis=1)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
-        def generar_reason(row):
-    try:
-            qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
-            inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
-            shortage = qty - inv
-            return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
-        except Exception as e:
-            return f"Error: {e}"
-
-df['Reason'] = df.apply(generar_reason, axis=1)
+        df['Reason'] = df.apply(lambda row: (
+            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+            " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+        ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 
     with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
@@ -165,11 +148,19 @@ df['Reason'] = df.apply(generar_reason, axis=1)
     zco41_ok = zco41_eval[zco41_eval['Can Produce_order']]
     zco41_nok = zco41_eval[~zco41_eval['Can Produce_order']].copy()
     zco41_nok['Net Inventory'] = zco41_nok['Available after COOIS'] - zco41_nok['Pln.Or Qty']
-    zco41_nok['Reason'] = zco41_nok.apply(generar_reason, axis=1)
+    zco41_nok['Reason'] = zco41_nok.apply(lambda row: (
+        "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
+        " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
+        " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
+    ), axis=1)
 
     coois_nok = coois_eval[~coois_eval['Can Produce_order']].copy()
     coois_nok['Net Inventory'] = coois_nok['Open Quantity'] - coois_nok['Order quantity (GMEIN)']
-    coois_nok['Reason'] = coois_nok.apply(generar_reason, axis=1)
+    coois_nok['Reason'] = coois_nok.apply(lambda row: (
+        "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Order quantity (GMEIN)'])) +
+        " units of '" + row['Custom Description'] + "', but only " + str(int(row['Open Quantity'])) +
+        " are available. Shortage: " + str(int(row['Order quantity (GMEIN)'] - row['Open Quantity']))
+    ), axis=1)
 
     faltantes_sorted = faltantes_con_non_custom.sort_values(by='Cantidad Faltante', ascending=False)
 
