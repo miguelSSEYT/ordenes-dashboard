@@ -71,9 +71,6 @@ st.header("🏷️ Resumen por Tipo de Orden")
 st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
 st.dataframe(resumen_ordenes)
 
-
-    
-
     # Preparar equivalencia
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
     mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
