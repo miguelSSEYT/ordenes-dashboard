@@ -121,29 +121,31 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
         df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
-        df['Reason'] = df.apply(lambda row: (
-            "Sales Order {} needs {} units of '{}', but only {} are available. Shortage: {}".format(
-                row['Sales Order'],
-                int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0))),
-                row['Custom Description'],
-                int(row.get('Available after COOIS', row.get('Open Quantity', 0))),
-                int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)) - row.get('Available after COOIS', row.get('Open Quantity', 0)))
-            )
-        ), axis=1)
+        def safe_reason(row):
+    try:
+        qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
+        inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
+        shortage = qty - inv
+        return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
+    except Exception as e:
+        return f"Error generating reason: {e}"
+
+df['Reason'] = df.apply(safe_reason, axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
         df['Net Inventory'] = df['Open Quantity'] - df['Order quantity (GMEIN)']
-        df['Reason'] = df.apply(lambda row: (
-            "Sales Order {} needs {} units of '{}', but only {} are available. Shortage: {}".format(
-                row['Sales Order'],
-                int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0))),
-                row['Custom Description'],
-                int(row.get('Available after COOIS', row.get('Open Quantity', 0))),
-                int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)) - row.get('Available after COOIS', row.get('Open Quantity', 0)))
-            )
-        ), axis=1)
+        def safe_reason(row):
+    try:
+        qty = int(row.get('Pln.Or Qty', row.get('Order quantity (GMEIN)', 0)))
+        inv = int(row.get('Available after COOIS', row.get('Open Quantity', 0)))
+        shortage = qty - inv
+        return f"Sales Order {row['Sales Order']} needs {qty} units of '{row['Custom Description']}', but only {inv} are available. Shortage: {shortage}"
+    except Exception as e:
+        return f"Error generating reason: {e}"
+
+df['Reason'] = df.apply(safe_reason, axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Order quantity (GMEIN)', 'Open Quantity', 'Net Inventory', 'Reason']])
 
     with st.expander("⚠️ Past Due - ZCO41 y COOIS que NO se pueden producir"):
