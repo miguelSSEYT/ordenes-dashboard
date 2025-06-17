@@ -64,7 +64,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     st.subheader("Cantidad Total de Vasos por Tipo")
     st.dataframe(resumen_qty)
 
-st.header("🏷️ Resumen por Tipo de Orden")
+    st.header("🏷️ Resumen por Tipo de Orden")
     st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
     st.dataframe(resumen_ordenes)
 
