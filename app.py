@@ -14,8 +14,8 @@ coois_file = st.sidebar.file_uploader("COOIS - Órdenes fijas", type="xlsx")
 zco41_file = st.sidebar.file_uploader("ZCO41 - Nueva demanda", type="xlsx")
 
 if crossref_file and mb52_file and coois_file and zco41_file:
-st.success("Archivos cargados correctamente")
-
+    st.success("Archivos cargados correctamente")
+    
 today = pd.to_datetime(datetime.today().date())
 
 # Leer archivos
