@@ -125,14 +125,15 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         st.dataframe(zco41_eval[zco41_eval['Can Produce_order']])
 
     with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
-        df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
-        df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
-        df['Reason'] = df.apply(lambda row: (
-            "Sales Order " + str(row['Sales Order']) + " needs " + str(int(row['Pln.Or Qty'])) +
-            " units of '" + row['Custom Description'] + "', but only " + str(int(row['Available after COOIS'])) +
-            " are available. Shortage: " + str(int(row['Pln.Or Qty'] - row['Available after COOIS']))
-        ), axis=1)
-        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
+    df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
+    df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
+    df['Reason'] = df.apply(lambda row: (
+        "✅ Can be produced — enough inventory available"
+        if row['Available after COOIS'] >= row['Pln.Or Qty']
+        else "❌ Cannot be produced — not enough inventory"
+    ), axis=1)
+    st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
+
 
     with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
         df = coois_eval[~coois_eval['Can Produce_order']].copy()
