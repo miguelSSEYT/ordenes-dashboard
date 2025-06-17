@@ -103,8 +103,11 @@ if crossref_file and mb52_file and coois_file and zco41_file:
 
     zco41_orders = zco41_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
     if 'Sales Order' not in coois_eval.columns:
-        st.error("❌ La columna 'Sales Order' no fue encontrada en el archivo ZVA05 MES. Verifica el nombre exacto en el encabezado del archivo.")
-        st.stop()
+        if 'Sales document' in coois_eval.columns:
+            coois_eval = coois_eval.rename(columns={'Sales document': 'Sales Order'})
+        else:
+            st.error("❌ La columna 'Sales Order' (o 'Sales document') no fue encontrada en el archivo ZVA05 MES. Verifica el encabezado.")
+            st.stop()
     coois_orders = coois_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
 
     zco41_eval = zco41_eval.merge(zco41_orders, on='Sales Order', suffixes=('', '_order'))
