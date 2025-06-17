@@ -212,4 +212,4 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 else:
-st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
+    st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
