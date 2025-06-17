@@ -102,6 +102,9 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_eval['Can Produce'] = coois_eval['Order quantity (GMEIN)'] <= coois_eval['Open Quantity']
 
     zco41_orders = zco41_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
+    if 'Sales Order' not in coois_eval.columns:
+        st.error("❌ La columna 'Sales Order' no fue encontrada en el archivo ZVA05 MES. Verifica el nombre exacto en el encabezado del archivo.")
+        st.stop()
     coois_orders = coois_eval.groupby('Sales Order')['Can Produce'].all().reset_index()
 
     zco41_eval = zco41_eval.merge(zco41_orders, on='Sales Order', suffixes=('', '_order'))
