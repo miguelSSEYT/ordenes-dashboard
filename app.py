@@ -48,34 +48,40 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     
     zco41_office_summary = zco41.groupby('Sales office')['Pln.Or Qty'].sum().reset_index()
     zco41_office_summary['Fuente'] = 'ZCO41'
-    
-    coois_office_summary = coois_office_summary.rename(columns={
-        'Sales office': 'Tipo de Orden',
-        'Order Quantity (Item)': 'Cantidad'
-    })
-    zco41_office_summary = zco41_office_summary.rename(columns={
-        'Sales office': 'Tipo de Orden',
-        'Pln.Or Qty': 'Cantidad'
-    })
-    
-    resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
 
-    # Mapear los tipos de orden según las reglas que me diste
+        # Mapeo general para ambos archivos
     def map_tipo_orden(valor):
         if valor in ['BDV', 'CTL']:
             return 'BDV'
         elif valor in ['ECM', 'YRD']:
             return 'ECM'
         else:
-            return 'BDV'  # Todo lo demás lo tomamos como BDV
-
-    # Aplicar el mapeo
-    resumen_ordenes['Tipo de Orden'] = resumen_ordenes['Tipo de Orden'].apply(map_tipo_orden)
-
-    # Agrupar para sumar cantidades después del mapeo
-    resumen_ordenes = resumen_ordenes.groupby('Tipo de Orden', as_index=False)['Cantidad'].sum()
-
-
+            return 'BDV'
+    
+    # === COOIS ===
+    coois['Sales office'] = coois['Sales office'].fillna('null')
+    coois_office_summary = coois.groupby('Sales office')['Order Quantity (Item)'].sum().reset_index()
+    coois_office_summary = coois_office_summary.rename(columns={
+        'Sales office': 'Tipo de Orden',
+        'Order Quantity (Item)': 'Cantidad'
+    })
+    coois_office_summary['Tipo de Orden'] = coois_office_summary['Tipo de Orden'].apply(map_tipo_orden)
+    coois_office_summary = coois_office_summary.groupby('Tipo de Orden', as_index=False)['Cantidad'].sum()
+    coois_office_summary['Fuente'] = 'COOIS'
+    
+    # === ZCO41 ===
+    zco41['Sales office'] = zco41['Sales office'].fillna('null')
+    zco41_office_summary = zco41.groupby('Sales office')['Pln.Or Qty'].sum().reset_index()
+    zco41_office_summary = zco41_office_summary.rename(columns={
+        'Sales office': 'Tipo de Orden',
+        'Pln.Or Qty': 'Cantidad'
+    })
+    zco41_office_summary['Tipo de Orden'] = zco41_office_summary['Tipo de Orden'].apply(map_tipo_orden)
+    zco41_office_summary = zco41_office_summary.groupby('Tipo de Orden', as_index=False)['Cantidad'].sum()
+    zco41_office_summary['Fuente'] = 'ZCO41'
+    
+    # === Unir para mostrar ===
+    resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
     
     st.header("🆚 Vasos SS vs DC")
     st.subheader("Cantidad Total de Vasos por Tipo")
