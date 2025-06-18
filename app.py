@@ -61,12 +61,12 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
 
     # Mapear los tipos de orden según las reglas que me diste
-    def map_tipo_orden(valor):
-        if valor in ['BDV', 'CTL']:
-            return 'BDV'
-        elif valor in ['ECM', 'YRD']:
-            return 'ECM'
-        else:
+def map_tipo_orden(valor):
+    if valor in ['BDV', 'CTL']:
+        return 'BDV'
+    elif valor in ['ECM', 'YRD']:
+        return 'ECM'
+    else:
         return 'BDV'  # Todo lo demás lo tomamos como BDV
 
 # Aplicar el mapeo
@@ -74,6 +74,7 @@ resumen_ordenes['Tipo de Orden'] = resumen_ordenes['Tipo de Orden'].apply(map_ti
 
 # Agrupar para sumar cantidades después del mapeo
 resumen_ordenes = resumen_ordenes.groupby('Tipo de Orden', as_index=False)['Cantidad'].sum()
+
 
     
     st.header("🆚 Vasos SS vs DC")
