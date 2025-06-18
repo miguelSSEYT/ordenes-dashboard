@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-import io
 
 st.set_page_config(page_title="Ordenes Producibles", layout="wide")
 st.title("📄 Análisis de Producción: COOIS, ZCO41 vs MB52")
