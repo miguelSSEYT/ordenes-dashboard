@@ -19,10 +19,11 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     today = pd.to_datetime(datetime.today().date())
     
     # Leer archivos
+    coois = pd.read_excel(coois_file, sheet_name='Sheet1')
     crossref = pd.read_excel(crossref_file, sheet_name='Sheet1')
     mb52 = pd.read_excel(mb52_file, sheet_name='Sheet1')
-    coois = pd.read_excel(coois_file, sheet_name='Sheet1')
     zco41 = pd.read_excel(zco41_file, sheet_name='Sheet1')
+
     
     # Clasificar DC y SS
     coois['Tipo'] = coois['Master Material Description'].apply(lambda x: 'SS' if isinstance(x, str) and x.strip().endswith('SS') else 'DC')
