@@ -20,7 +20,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     
     # Leer archivos
     coois = pd.read_excel(coois_file, sheet_name='Sheet1')
-    crossref = pd.read_excel(crossref_file, sheet_name='Sheet1')
+    crossref = pd.read_excel(crossref_file, sheet_name='CROSSREFERENCE SAP')
     mb52 = pd.read_excel(mb52_file, sheet_name='Sheet1')
     zco41 = pd.read_excel(zco41_file, sheet_name='Sheet1')
 
