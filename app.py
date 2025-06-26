@@ -1,5 +1,3 @@
-pero si hay, recuerda que este es mi codigo y de los archivos solo agarramos la sheet1:
-
 import streamlit as st
 import pandas as pd
 from io import BytesIO
