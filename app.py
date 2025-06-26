@@ -161,7 +161,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     coois_orders = coois_eval.groupby('Sales document')['Can Produce'].all().reset_index()
     coois_eval = coois_eval.merge(coois_orders, on='Sales document', suffixes=('', '_order'))
 
-        st.header("📊 Resultados del Análisis")
+    st.header("📊 Resultados del Análisis")
 
     with st.expander("ZCO41 - Órdenes COMPLETAS que SÍ se pueden producir"):
         st.dataframe(zco41_eval[zco41_eval['Can Produce_order']])
