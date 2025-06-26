@@ -79,6 +79,8 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     zco41_office_summary['Fuente'] = 'ZCO41'
 
     # === Unir para mostrar ===
+    resumen_ordenes = pd.concat([coois_office_summary, zco41_office_summary], ignore_index=True)
+
    # Asegurar tipo numérico para formateo correcto
     resumen_qty['Cantidad'] = pd.to_numeric(resumen_qty['Cantidad'], errors='coerce').fillna(0)
     resumen_ordenes['Cantidad'] = pd.to_numeric(resumen_ordenes['Cantidad'], errors='coerce').fillna(0)
