@@ -1,3 +1,5 @@
+pero si hay, recuerda que este es mi codigo y de los archivos solo agarramos la sheet1:
+
 import streamlit as st
 import pandas as pd
 from io import BytesIO
@@ -20,7 +22,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     
     # Leer archivos
     coois = pd.read_excel(coois_file, sheet_name='Sheet1')
-    crossref = pd.read_excel(crossref_file, sheet_name='Sheet1')
+    crossref = pd.read_excel(crossref_file, sheet_name='CROSSREFERENCE SAP')
     mb52 = pd.read_excel(mb52_file, sheet_name='Sheet1')
     zco41 = pd.read_excel(zco41_file, sheet_name='Sheet1')
 
@@ -233,5 +235,6 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         file_name="analisis_produccion.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+    
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
