@@ -58,12 +58,12 @@ if crossref_file and mb52_file and coois_file and zco41_file:
     st.subheader("Cantidad Total de Vasos por Tipo de Orden (Sales office)")
     st.dataframe(resumen_ordenes.style.format({"Cantidad": ":,.0f"}))
 
-    # Preparar equivalencia
+    # Preparar equivalencia y agrupar inventario
     crossref = crossref.rename(columns={"Non Custom": "Material description", "Custom": "Custom Description"})
     mb52_grouped = mb52.groupby('Material description', as_index=False)['Open Quantity'].sum()
     mb52_custom = mb52_grouped.merge(crossref, on='Material description', how='left')
 
-    # Agrupar COOIS y ZCO41
+    # Renombrar columnas
     coois = coois.rename(columns={'Master Material Description': 'Custom Description'})
     zco41 = zco41.rename(columns={'Material description': 'Custom Description'})
 
@@ -196,6 +196,5 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         file_name="analisis_produccion.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
 else:
     st.info("Por favor, sube los cuatro archivos para iniciar el análisis.")
