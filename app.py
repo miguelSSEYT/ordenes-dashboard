@@ -175,7 +175,7 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
         df['Reason'] = df.apply(lambda row: (
             "Can be produced — enough inventory available"
-            if row['Available after COOIS'] >= row['Pln.Or Qty']
+            if pd.notnull(row['Available after COOIS']) and pd.notnull(row['Pln.Or Qty']) and row['Available after COOIS'] >= row['Pln.Or Qty']
             else "Cannot be produced — not enough inventory"
         ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
