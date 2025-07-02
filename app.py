@@ -180,17 +180,16 @@ if crossref_file and mb52_file and coois_file and zco41_file:
         ), axis=1)
         st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
 
-    with st.expander("COOIS - Órdenes COMPLETAS que NO se pueden producir"):
-        df = coois_eval[~coois_eval['Can Produce_order']].copy()
-        df['Net Inventory'] = df['Open Quantity'] - df['Order Quantity (Item)']
+   with st.expander("ZCO41 - Órdenes COMPLETAS que NO se pueden producir"):
+        df = zco41_eval[~zco41_eval['Can Produce_order']].copy()
+        df['Net Inventory'] = df['Available after COOIS'] - df['Pln.Or Qty']
         df['Reason'] = df.apply(lambda row: (
-            "Sales document " + str(row['Sales document']) +
-            " needs " + str(int(row['Order Quantity (Item)'])) +
-            " units of '" + str(row['Custom Description']) + "', but only " +
-            str(int(row['Open Quantity'])) + " are available. Shortage: " +
-            str(int(row['Order Quantity (Item)'] - row['Open Quantity']))
+            "Can be produced — enough inventory available"
+            if row['Available after COOIS'] >= row['Pln.Or Qty']
+            else "Cannot be produced — not enough inventory"
         ), axis=1)
-        st.dataframe(df[['Sales document', 'Custom Description', 'Order Quantity (Item)', 'Open Quantity', 'Net Inventory', 'Reason']])
+        st.dataframe(df[['Sales Order', 'Custom Description', 'Pln.Or Qty', 'Available after COOIS', 'Net Inventory', 'Reason']])
+
 
     with st.expander("Past Due - ZCO41 y COOIS que NO se pueden producir"):
         zco41_past_due = zco41_eval[(~zco41_eval['Can Produce_order']) & (pd.to_datetime(zco41_eval['Estimated Ship Date']) < today)]
